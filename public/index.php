@@ -26,9 +26,6 @@ $app->addErrorMiddleware(true, true, true);
 $router = $app->getRouteCollector()->getRouteParser();
 
 $app->get('/', function ($request, $response) use ($router) {
-    // $response->getBody()->write('Welcome to Slim!');
-    // return $response;
-
     $router->urlFor('users');
     $router->urlFor('user', ['id' => 4]);
     return $response;
@@ -93,8 +90,7 @@ $app->get('/users/{id}/edit', function ($request, $response, $args) {
     $currentUser = $repo->findById($id);
     $params = [
         'user' => $currentUser,
-        'errors' => [],
-        'newData' => $currentUser
+        'errors' => []
     ];
     $this->get('flash')->addMessage('success', 'User has been updated');
     return $this->get('renderer')->render($response, 'users/edit.phtml', $params);
@@ -120,10 +116,27 @@ $app->patch('/users/{id}', function ($request, $response, $args) use ($router) {
     }
     $params = [ 
         'user' => $user,
-        'errors' => $errors,
-        'newData' => $newData
+        'errors' => $errors
         ];
     return $this->get('renderer')->render($response->withStatus(422), 'users/edit.phtml', $params);
+});
+
+$app->get('/users/{id}/delete', function($request, $response, $args) {
+    $repo = new Repo();
+    $id = $args['id'];
+    $currentUser = $repo->findById($id);
+    $params = ['user' => $currentUser ];
+    $this->get('flash')->addMessage('success', 'User has been deleted');
+    return $this->get('renderer')->render($response, 'users/delete.phtml', $params);
+});
+
+$app->delete('/users/{id}', function ($request, $response, $args) {
+    $repo = new Repo();
+    $id = $args['id'];
+    $repo->delete($id);
+    $messages = $this->get('flash')->getMessages();
+    $params = ['flash' => $messages];
+    return $this->get('renderer')->render($response, 'users/index.phtml', $params);
 });
 
 // $app->get('/check', function ($request, $response) {

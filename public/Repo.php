@@ -35,6 +35,14 @@ class Repo {
         $filtredUsers[] = $user;
         file_put_contents('registred-users.phtml', json_encode($user) . ";\n", FILE_APPEND);
     }
+
+    public function delete($id) {
+        $filtredUsers = array_filter($this->all, fn($thisUser) => $id !== $thisUser['id']);
+        file_put_contents('registred-users.phtml', '');
+        foreach($filtredUsers as $newUser) {
+            file_put_contents('registred-users.phtml', json_encode($newUser) . ";\n", FILE_APPEND);
+        }
+    }
     
 }
 
