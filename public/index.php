@@ -3,8 +3,10 @@
 require __DIR__ . '/../vendor/autoload.php';
 
 use App\Validator;
+use App\Repo;
 use Slim\Factory\AppFactory;
 use DI\Container;
+use Slim\Middleware\MethodOverrideMiddleware;
 
 session_start();
 
@@ -18,11 +20,8 @@ $container->set('flash', function () {
 });
 
 $app = AppFactory::createFromContainer($container);
-
+$app->add(MethodOverrideMiddleware::class);
 $app->addErrorMiddleware(true, true, true);
-
-$registredUsersJson = explode(';', file_get_contents('registred-users.phtml'));
-$registredUsers = array_map(fn($user) => json_decode($user, true), $registredUsersJson);
 
 $router = $app->getRouteCollector()->getRouteParser();
 
@@ -35,11 +34,11 @@ $app->get('/', function ($request, $response) use ($router) {
     return $response;
 });
 
-$app->get('/users', function ($request, $response) use ($registredUsers) {
+$app->get('/users', function ($request, $response) {
     $queries = $request->getQueryParams();
     $term = $queries['term'] ?? '';
-    $usersNames = array_map(fn($user) =>$user['name'] , $registredUsers);
-    $filtredUsers = array_filter($usersNames, fn($user) => str_contains(strtolower($user), strtolower($term)));
+    $users = new Repo();
+    $filtredUsers = $users->findByName($term);
     if (empty($filtredUsers)) {
         return $response->withStatus(404);
     }
@@ -54,7 +53,9 @@ $app->post('/users', function ($request, $response) {
     $validator = new Validator();
     $errors = $validator->validate($user);
     if (count($errors) === 0) {
-        file_put_contents('registred-users.phtml', json_encode($user) . ";\n", FILE_APPEND);
+        $repo = new Repo();
+        $repo->save($user);
+        //file_put_contents('registred-users.phtml', json_encode($user) . ";\n", FILE_APPEND);
         $messages = $this->get('flash')->getMessages();
         $params = ['flash' => $messages];
         return $this->get('renderer')->render($response, 'users/index.phtml', $params);
@@ -72,26 +73,65 @@ $app->get('/users/new', function ($request, $response) {
     return $this->get('renderer')->render($response, "users/new.phtml", $params);
 });
 
-$app->get('/users/{id}', function ($request, $response, $args) use ($registredUsers) {
-    
-    $currentUser = array_filter($registredUsers, function ($user) use ($args) {
-        return $user['id'] === $args['id'];
-    });
+$app->get('/users/{id}', function ($request, $response, $args) {
+    $id = $args['id'];
+    $users = new Repo();
+    $currentUser = $users->findById($id);
     if (empty($currentUser)) {
         return $response->withStatus(404);
     }
-    $currentUserValues = array_values($currentUser)[0];
-    $params = [ 'name' => $currentUserValues['name'],
-    'email' => $currentUserValues['email'],
-    'city' => $currentUserValues['city'] 
+    $params = [ 'name' => $currentUser['name'],
+    'email' => $currentUser['email'],
+    'city' => $currentUser['city'] 
     ];
     return $this->get('renderer')->render($response, 'users/show.phtml', $params);
 })->setName('user');
 
-$app->get('/courses/{id}', function ($request, $response, array $args) {
+$app->get('/users/{id}/edit', function ($request, $response, $args) {
     $id = $args['id'];
-    $response->getBody()->write("Course id: {$id}");
-    return $response;
+    $repo = new Repo();
+    $currentUser = $repo->findById($id);
+    $params = [
+        'user' => $currentUser,
+        'errors' => [],
+        'newData' => $currentUser
+    ];
+    $this->get('flash')->addMessage('success', 'User has been updated');
+    return $this->get('renderer')->render($response, 'users/edit.phtml', $params);
+})->setName('editUser');
+
+$app->patch('/users/{id}', function ($request, $response, $args) use ($router) {
+    $repo = new Repo();
+    $id = $args['id'];
+    $user = $repo->findById($id);
+    $body = $request->getParsedBody();
+    $newData = $body['user'];
+
+    $validator = new Validator();
+    $errors = $validator->updatingValidate($newData);
+    
+    if (count($errors) === 0) {
+        $user['name'] = $newData['name'];
+        $user['email'] = $newData['email'];
+        $repo->save($user);
+        $messages = $this->get('flash')->getMessages();
+        $params = ['flash' => $messages];
+        return $this->get('renderer')->render($response, 'users/index.phtml', $params);
+    }
+    $params = [ 
+        'user' => $user,
+        'errors' => $errors,
+        'newData' => $newData
+        ];
+    return $this->get('renderer')->render($response->withStatus(422), 'users/edit.phtml', $params);
 });
+
+// $app->get('/check', function ($request, $response) {
+//     $repo = new Repo();
+//     $user = $repo->findById('');
+//     print_r($user);
+//     $params = ['repo' => $user ];
+//     return $this->get('renderer')->render($response, 'users/index.phtml', $params);
+// }); 
 
 $app->run();
