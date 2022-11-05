@@ -1,0 +1,16 @@
+<h1>Login</h1>
+
+<?php if ($userSession) : ?>
+    <?= $userSession['name'] ?></div>
+    <form action="/users/login" method="post">
+        <input type="hidden" name="_METHOD" value="DELETE">
+        <input type="submit" value="Log out">
+    </form>
+<?php else: ?>
+<form action="/users/login" method="post">
+    <input type="text" name="user[name]" value="">   
+    <input type="text" name="user[password]" value="">
+    <input type="submit" value="Log in">
+</form>
+<?php endif; ?>
+

@@ -52,7 +52,6 @@ $app->post('/users', function ($request, $response) {
     if (count($errors) === 0) {
         $repo = new Repo();
         $repo->save($user);
-        //file_put_contents('registred-users.phtml', json_encode($user) . ";\n", FILE_APPEND);
         $messages = $this->get('flash')->getMessages();
         $params = ['flash' => $messages];
         return $this->get('renderer')->render($response, 'users/index.phtml', $params);
@@ -70,6 +69,38 @@ $app->get('/users/new', function ($request, $response) {
     return $this->get('renderer')->render($response, "users/new.phtml", $params);
 });
 
+$app->get('/users/login', function ($request, $response) {
+    $params = [
+        'userSession' => $_SESSION['user'] ?? null
+];
+    return $this->get('renderer')->render($response, 'users/login.phtml', $params);
+});
+
+session_start();
+
+$app->post('/users/login', function ($request, $response) {
+    $queries = $request->getParsedBody();
+    $loginData = $queries['user'];
+    $repo = new Repo();
+    $currentUser = $repo->findByPasswordAndName($loginData['password'], $loginData['name']);
+    //$currentUser = array_filter($repo, fn($user) => ($user['password'] === $loginData['password'] && $user['name'] === $loginData['name']));
+    if (empty($currentUser)) {
+        return $response->withStatus(405);
+    }
+    $_SESSION['user'] = $currentUser;
+    $params = [
+        'userSession' => $_SESSION['user']
+        ];
+    return $this->get('renderer')->render($response, 'users/login.phtml', $params);
+});
+
+$app->delete('/users/login', function ($request, $response) {
+    $_SESSION = [];
+    session_destroy();
+    $params = ['userSession' => $_SESSION['user']];
+    return $this->get('renderer')->render($response, 'users/login.phtml', $params);
+});
+
 $app->get('/users/{id}', function ($request, $response, $args) {
     $id = $args['id'];
     $users = new Repo();
@@ -77,10 +108,8 @@ $app->get('/users/{id}', function ($request, $response, $args) {
     if (empty($currentUser)) {
         return $response->withStatus(404);
     }
-    $params = [ 'name' => $currentUser['name'],
-    'email' => $currentUser['email'],
-    'city' => $currentUser['city'] 
-    ];
+    $params = ['user' => $currentUser ];
+    $this->get('flash')->addMessage('success', 'User has been deleted');
     return $this->get('renderer')->render($response, 'users/show.phtml', $params);
 })->setName('user');
 
@@ -121,15 +150,6 @@ $app->patch('/users/{id}', function ($request, $response, $args) use ($router) {
     return $this->get('renderer')->render($response->withStatus(422), 'users/edit.phtml', $params);
 });
 
-$app->get('/users/{id}/delete', function($request, $response, $args) {
-    $repo = new Repo();
-    $id = $args['id'];
-    $currentUser = $repo->findById($id);
-    $params = ['user' => $currentUser ];
-    $this->get('flash')->addMessage('success', 'User has been deleted');
-    return $this->get('renderer')->render($response, 'users/delete.phtml', $params);
-});
-
 $app->delete('/users/{id}', function ($request, $response, $args) {
     $repo = new Repo();
     $id = $args['id'];
@@ -139,12 +159,14 @@ $app->delete('/users/{id}', function ($request, $response, $args) {
     return $this->get('renderer')->render($response, 'users/index.phtml', $params);
 });
 
-// $app->get('/check', function ($request, $response) {
-//     $repo = new Repo();
-//     $user = $repo->findById('');
-//     print_r($user);
-//     $params = ['repo' => $user ];
-//     return $this->get('renderer')->render($response, 'users/index.phtml', $params);
-// }); 
+
+
+$app->get('/check', function ($request, $response) {
+    $repo = new Repo();
+    $user = $repo->findByPassword('1234');
+    print_r($user);
+    $params = ['repo' => $user ];
+    return $this->get('renderer')->render($response, 'users/index.phtml', $params);
+}); 
 
 $app->run();

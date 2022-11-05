@@ -1,9 +1,10 @@
 <h1>Hello</h1>
 
-<div><?= $name ?></div>
-<div><?= $email ?></div>
-<div><?= $city ?></div>
+<div><?= $user['name'] ?></div>
+<div><?= $user['email'] ?></div>
+<div><?= $user['city'] ?></div>
 
-<!-- <?php foreach ($currentUser as $property) : ?>
-    <div><?= $property ?></div>
-<?php endforeach ?> -->
+<form action="/users/<?= $user['id'] ?>" method="post">
+    <input type="hidden" name="_METHOD" value="DELETE">
+    <input type="submit" value="Delete">
+</form>

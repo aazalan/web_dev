@@ -23,6 +23,11 @@ class Repo {
         return $currentUser[0];
     }
 
+    public function findByPasswordAndName($password, $name) {
+        $currentUser = array_values(array_filter($this->all, fn($user) => $user['password'] == $password && $user['name'] === $name));
+        return $currentUser[0];
+    }
+
     public function save($user) {
         $filtredUsers = array_filter($this->all, fn($thisUser) => $user['id'] !== $thisUser['id']);
         $updatingUser = array_filter($this->all, fn($thisUser) => $user['id'] === $thisUser['id']);
