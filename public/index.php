@@ -83,7 +83,6 @@ $app->post('/users/login', function ($request, $response) {
     $loginData = $queries['user'];
     $repo = new Repo();
     $currentUser = $repo->findByPasswordAndName($loginData['password'], $loginData['name']);
-    //$currentUser = array_filter($repo, fn($user) => ($user['password'] === $loginData['password'] && $user['name'] === $loginData['name']));
     if (empty($currentUser)) {
         return $response->withStatus(405);
     }

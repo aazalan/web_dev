@@ -7,6 +7,10 @@
 
 <ul>
 <?php foreach ($users as $user) : ?>
-    <li><?php echo $user['name'] ?></li>
+    <li><a href="/users/<?= $user['id'] ?>"><?php echo $user['name'] ?></li>
 <?php endforeach ?>
 </ul>
+
+<a href="/users/new">New user</a>
+<div></div>
+<a href="/users/login">Login</a>
